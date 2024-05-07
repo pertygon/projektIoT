@@ -23,6 +23,7 @@ class oknoWyboru(QWidget):
         self.ppkont = None
     def wyswietlPliki(self):
         try:
+            self.podgladLista.clear()
             self.dir_name = QFileDialog.getExistingDirectory(self, "Wybierz folder z danymi pomiarowymi")
             pliki = os.listdir(self.dir_name)
             for plik in pliki:

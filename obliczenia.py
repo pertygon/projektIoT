@@ -4,9 +4,11 @@ from pathlib import Path
 import wzory
 import glob
 import natsort
+from numpy import nan 
 #Zrobic mozliwosc czytania z excela
 #nazwy plikow musza byc liczbami
 #dodac odpowiednie reagowanie na zla nazwe pliku
+f = None # czestotliwosc9i
 def folderObliczone(sciezka):
     try:
         path = os.path.join(sciezka, "obliczone") 
@@ -36,6 +38,8 @@ def obliczenia(sciezka,plik,opcja,dl,sz,gr,ppk):
     df['Cp'] = df['Cp'].str.replace(',','.').astype(float)
     df['D'] = df['D'].str.replace(',','.').astype(float)
     df['Rp'] = df['Rp'].str.replace(',','.').astype(float)
+    global f
+    f = df['Freq']
     #Tworzenie nowych kolumn i tworzenie obliczen
     if opcja == 1:
         df['Konduktywnosc sigma'] = wzory.cip(wzory.Rho(df['Rp']),gr*sz,dl)
@@ -57,19 +61,20 @@ def do_wykresow(sciezka):
     zapisuj wartosci do plikow
 
     """
-    wspAlfa = pd.DataFrame()
-    wspCp = pd.DataFrame()
-    wspEps = pd.DataFrame()
-    wspR = pd.DataFrame()
-    wspRo = pd.DataFrame()
-    wspSigma = pd.DataFrame()
-    wspTeta = pd.DataFrame()
-    wspTgDelta = pd.DataFrame()
+    wspAlfa,wspCp,wspEps,wspR,wspRo,wspSigma,wspTeta,wspTgDelta = (pd.DataFrame() for i in range(8))
+    dfLista = [wspAlfa,wspCp,wspEps,wspR,wspRo,wspSigma,wspTeta,wspTgDelta]
     pathWykresy = os.path.join(sciezka, "wykresy") 
     pathObliczone = os.path.join(sciezka, "obliczone")
     os.mkdir(pathWykresy)
     xlxsPliki = glob.glob(os.path.join(pathObliczone, "*.xlsx"))
     xlxsPliki = natsort.natsorted(xlxsPliki,reverse=False)
+    global f
+    #dodawanie kolumn f, temp
+    for i in dfLista:
+        i['Freq'] = f
+        for j in range(10,20):
+            i[j] = nan
+    #reszta
     for plik in xlxsPliki:
         nazwaPliku = Path(plik).stem
         df = pd.read_excel(plik)
@@ -90,4 +95,4 @@ def do_wykresow(sciezka):
     wspSigma.to_excel(pathWykresy+'\\'+'wsp sigma'+'.xlsx',index = False)
     wspTeta.to_excel(pathWykresy+'\\'+'wsp teta'+'.xlsx',index = False)
     wspTgDelta.to_excel(pathWykresy+'\\'+'wsp tg delta'+'.xlsx',index = False)
-do_wykresow(r"D:\Michal\MoC 1.1\Ta=niew\Pomiary")
+#do_wykresow(r"D:\STUDIA\Projekt_IoT\projekt_IoT_MELJON")
