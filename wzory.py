@@ -10,11 +10,11 @@ def cip(rho,l,S):
 def cpp(rho,d,Pk):
     return ((rho*d)/Pk)
 def wsplKonduktywnosci(sigma,f):
-    return (np.log(sigma)/np.log(f))
+    return (np.log1p(sigma)/np.log1p(f))
 def rSkladowaPrzenikalnosci(Cp,C0):
     return Cp/C0
 def C0(A,d):
-    return (epsilon0*(A/d))
+    return epsilon0*(A/d)
 def iSkladowaPrzenikalnosci(sigma,omega):
     return (sigma/(epsilon0*omega))
 def omega(f):
