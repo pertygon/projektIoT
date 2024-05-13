@@ -1,11 +1,12 @@
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QRegExp
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, 
     QPushButton, QRadioButton, QVBoxLayout, 
-    QHBoxLayout, QVBoxLayout,QProgressBar,
+    QHBoxLayout, QVBoxLayout,QProgressDialog,
     QLineEdit, QButtonGroup, QListWidget,
     QFileDialog, QGroupBox, QMessageBox
 )
+from PyQt5.QtGui import QRegExpValidator
 import obliczenia
 import os
 import sys
@@ -21,28 +22,39 @@ class oknoWyboru(QWidget):
         self.szerokosc = None
         self.grubosc = None
         self.ppkont = None
+        self.msgBox = QMessageBox()
+        self.msgBox.setIcon(QMessageBox.Warning)
+        self.msgBox.setWindowTitle("Błąd")
+        self.msgBox.setStandardButtons(QMessageBox.Ok)
+        self.progressDialog = QProgressDialog(self)
+        self.progressDialog.setWindowTitle("Proszę czekać...")
+        self.progressDialog.setLabelText("Obliczanie...")
+        self.progressDialog.setRange(0, 100)
+        self.progressDialog.setAutoReset(False)
+        self.progressDialog.setAutoClose(False)
     def wyswietlPliki(self):
         try:
             self.podgladLista.clear()
             self.dir_name = QFileDialog.getExistingDirectory(self, "Wybierz folder z danymi pomiarowymi")
             pliki = os.listdir(self.dir_name)
             for plik in pliki:
-                self.podgladLista.addItem(plik)
+                if plik.endswith('.csv'):
+                    self.podgladLista.addItem(plik)
         except:
             pass
+    
     def wyswietlCIP(self):
         self.cipGrupa.show()
         self.opcja = 1
         self.cppGrupa.hide()
+
     def wyswietlCPP(self):
         self.cppGrupa.show()
         self.opcja = 0
         self.cipGrupa.hide()
+
     def oblicz(self):
-        msgBox = QMessageBox()
-        msgBox.setIcon(QMessageBox.Warning)
-        msgBox.setWindowTitle("Błąd")
-        msgBox.setStandardButtons(QMessageBox.Ok)
+        #czy wszystkie potrzebne pola zostaly uzupelnione?
         try:
             self.grubosc = float(grProbki.text())
             if self.opcja == 1:
@@ -51,32 +63,29 @@ class oknoWyboru(QWidget):
             elif self.opcja == 0:
                 self.ppkont = float(ppKontaktu.text())
         except:
-            msgBox.setText("Wystąpił błąd. Sprawdź czy wpisałeś liczby i użyłeś kropki. Można też użyć notacji naukowej.")
-            return msgBox.exec()
-        #czy wszystkie potrzebne pola zostaly uzupelnione?
+            self.msgBox.setText("Wystąpił błąd. Sprawdź czy wpisałeś liczby i użyłeś kropki. Można też użyć notacji naukowej.")
+            return self.msgBox.exec()
+        
         if self.dir_name == "" or self.dir_name == None:
-            msgBox.setText("Źła ścieżka do plików")
-            return msgBox.exec()
+            self.msgBox.setText("Źła ścieżka do plików")
+            return self.msgBox.exec()
         elif self.opcja == None:
-            msgBox.setText("Nie wybrano sposobu pomiaru")
-            return msgBox.exec()
-        elif self.opcja == 1:
-            if self.dlugosc == None:
-                msgBox.setText("Pole długość próbki nie zostało uzupełnione")
-                return msgBox.exec()
-            if self.szerokosc == None:
-                msgBox.setText("Pole szerokość próbki nie zostało uzupełnione")
-                return msgBox.exec()
-        elif self.opcja == 0:
-            if self.ppkont == None:
-                msgBox.setText("Pole pole powierzchni kontaktu nie zostało uzupełnione")
-                return msgBox.exec()
-        elif self.grubosc == None:
-            msgBox.setText("Pole grubość próbki nie zostało uzupełnione")
-            return msgBox.exec()
-        obliczenia.petlaObliczen(self.dir_name,self.opcja,self.dlugosc,self.szerokosc,self.grubosc,self.ppkont)
+            self.msgBox.setText("Nie wybrano sposobu pomiaru")
+            return self.msgBox.exec()
+        elif self.podgladLista.count() == 0:
+            self.msgBox.setText("Nie ma plików albo nie są w formacie CSV")
+            return self.msgBox.exec()
+        obliczenia.petlaObliczen(self.dir_name,self.opcja,self.dlugosc,self.szerokosc,self.grubosc,self.ppkont,self.progressDialog)
+        self.msgBox.setWindowTitle("Sukces")
+        self.msgBox.setIcon(QMessageBox.Information)
+        self.msgBox.setText("Operacja zakończona sukcesem")
+        return self.msgBox.exec()
+
+
     def interface(self):
 #ustawienia okna
+        regex = QRegExp("[0-9eE.-]*")
+        validator = QRegExpValidator(regex)
         self.resize(800,400)
         self.setWindowTitle("Projekt automatyzacji stanowiska do spektroskopii impedancyjnej")
 #kontrolki       
@@ -97,6 +106,10 @@ class oknoWyboru(QWidget):
         ppKontaktu = QLineEdit()
         podgladEtykieta = QLabel("Podgląd wybranych plików")
         self.podgladLista = QListWidget()
+        dlProbki.setValidator(validator)
+        szProbki.setValidator(validator)
+        grProbki.setValidator(validator)
+        ppKontaktu.setValidator(validator)
         podgladPrzycisk = QPushButton("Wybierz folder")
         obliczPrzycisk = QPushButton("Wykonaj Obliczenia")
         self.cipGrupa = QGroupBox("Wprowadź informacje o sposobie wykonania pomiaru")
@@ -176,6 +189,7 @@ class oknoWyboru(QWidget):
         CIP.clicked.connect(self.wyswietlCIP)
         CPP.clicked.connect(self.wyswietlCPP)
         obliczPrzycisk.clicked.connect(self.oblicz)
+        
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     okno = oknoWyboru()
