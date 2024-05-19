@@ -2,9 +2,9 @@ from PyQt5.QtCore import Qt, QRegExp
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, 
     QPushButton, QRadioButton, QVBoxLayout, 
-    QHBoxLayout, QVBoxLayout,QProgressDialog,
+    QHBoxLayout, QVBoxLayout,QProgressBar,
     QLineEdit, QButtonGroup, QListWidget,
-    QFileDialog, QGroupBox, QMessageBox
+    QFileDialog, QGroupBox, QMessageBox, QMenuBar
 )
 from PyQt5.QtGui import QRegExpValidator
 import obliczenia
@@ -26,12 +26,8 @@ class oknoWyboru(QWidget):
         self.msgBox.setIcon(QMessageBox.Warning)
         self.msgBox.setWindowTitle("Błąd")
         self.msgBox.setStandardButtons(QMessageBox.Ok)
-        self.progressDialog = QProgressDialog(self)
-        self.progressDialog.setWindowTitle("Proszę czekać...")
-        self.progressDialog.setLabelText("Obliczanie...")
-        self.progressDialog.setRange(0, 100)
-        self.progressDialog.setAutoReset(False)
-        self.progressDialog.setAutoClose(False)
+        self.progresBar = QProgressBar()
+        self.progresBar.setRange(0,100)
     def wyswietlPliki(self):
         try:
             self.podgladLista.clear()
@@ -55,6 +51,15 @@ class oknoWyboru(QWidget):
 
     def oblicz(self):
         #czy wszystkie potrzebne pola zostaly uzupelnione?
+        if self.dir_name == "" or self.dir_name == None:
+            self.msgBox.setText("Źła ścieżka do plików lub jej brak")
+            return self.msgBox.exec()
+        elif self.opcja == None:
+            self.msgBox.setText("Nie wybrano sposobu pomiaru")
+            return self.msgBox.exec()
+        elif self.podgladLista.count() == 0:
+            self.msgBox.setText("Nie ma plików albo nie są w formacie CSV")
+            return self.msgBox.exec()
         try:
             self.grubosc = float(grProbki.text())
             if self.opcja == 1:
@@ -65,28 +70,21 @@ class oknoWyboru(QWidget):
         except:
             self.msgBox.setText("Wystąpił błąd. Sprawdź czy wpisałeś liczby i użyłeś kropki. Można też użyć notacji naukowej.")
             return self.msgBox.exec()
-        
-        if self.dir_name == "" or self.dir_name == None:
-            self.msgBox.setText("Źła ścieżka do plików")
-            return self.msgBox.exec()
-        elif self.opcja == None:
-            self.msgBox.setText("Nie wybrano sposobu pomiaru")
-            return self.msgBox.exec()
-        elif self.podgladLista.count() == 0:
-            self.msgBox.setText("Nie ma plików albo nie są w formacie CSV")
-            return self.msgBox.exec()
-        obliczenia.petlaObliczen(self.dir_name,self.opcja,self.dlugosc,self.szerokosc,self.grubosc,self.ppkont,self.progressDialog)
+        self.msgBox.setIcon(QMessageBox.Warning)
+        obliczenia.petlaObliczen(self.dir_name,self.opcja,self.dlugosc,self.szerokosc,self.grubosc,self.ppkont,self.progresBar,self.msgBox)
         self.msgBox.setWindowTitle("Sukces")
         self.msgBox.setIcon(QMessageBox.Information)
         self.msgBox.setText("Operacja zakończona sukcesem")
-        return self.msgBox.exec()
+        status = self.msgBox.exec()
+        if status == QMessageBox.Ok:
+            self.progresBar.reset()
 
 
     def interface(self):
 #ustawienia okna
         regex = QRegExp("[0-9eE.-]*")
         validator = QRegExpValidator(regex)
-        self.resize(800,400)
+        self.resize(600,400)
         self.setWindowTitle("Projekt automatyzacji stanowiska do spektroskopii impedancyjnej")
 #kontrolki       
         radioGroupBox = QGroupBox("Wybierz sposób wykonania pomiaru")
@@ -98,12 +96,16 @@ class oknoWyboru(QWidget):
         global szProbki, grProbki, dlProbki, ppKontaktu
         dlProbkiEt = QLabel("Długość próbki")
         dlProbki = QLineEdit()
+
         szProbkiEt = QLabel("Szerokość próbki")
         szProbki = QLineEdit()
+
         grProbkiEt = QLabel("Grubość próbki")
         grProbki = QLineEdit()
+
         ppKontaktuEt = QLabel("Pole powierzchni kontaktu")
         ppKontaktu = QLineEdit()
+
         podgladEtykieta = QLabel("Podgląd wybranych plików")
         self.podgladLista = QListWidget()
         dlProbki.setValidator(validator)
@@ -114,11 +116,13 @@ class oknoWyboru(QWidget):
         obliczPrzycisk = QPushButton("Wykonaj Obliczenia")
         self.cipGrupa = QGroupBox("Wprowadź informacje o sposobie wykonania pomiaru")
         self.cppGrupa = QGroupBox("Wprowadź informacje o sposobie wykonania pomiaru")
+        
 
 #layouty
         mainLayout = QVBoxLayout()
         row1 = QHBoxLayout()
         row2 = QHBoxLayout()
+        row3 = QHBoxLayout()
         column1 = QVBoxLayout()
         column2 = QVBoxLayout()
         #kolumna 1
@@ -178,9 +182,11 @@ class oknoWyboru(QWidget):
         column2.addLayout(c2r4)
         row1.addLayout(column1)
         row1.addLayout(column2)
-        row2.addWidget(obliczPrzycisk)
+        row2.addWidget(self.progresBar)
+        row3.addWidget(obliczPrzycisk)
         mainLayout.addLayout(row1)
         mainLayout.addLayout(row2)
+        mainLayout.addLayout(row3)
         self.setLayout(mainLayout)
         self.show()
         self.cipGrupa.hide()
@@ -189,7 +195,6 @@ class oknoWyboru(QWidget):
         CIP.clicked.connect(self.wyswietlCIP)
         CPP.clicked.connect(self.wyswietlCPP)
         obliczPrzycisk.clicked.connect(self.oblicz)
-        
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     okno = oknoWyboru()

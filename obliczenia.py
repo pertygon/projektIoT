@@ -4,7 +4,7 @@ from pathlib import Path
 import wzory
 import glob
 import natsort
-from numpy import nan, concatenate
+from numpy import nan
 #Zrobic mozliwosc czytania z excela
 #nazwy plikow musza byc liczbami
 #dodac odpowiednie reagowanie na zla nazwe pliku
@@ -17,24 +17,30 @@ def folderObliczone(sciezka):
     except:
         pass
 
-def petlaObliczen(sciezka,opcja,dl,sz,gr,ppk,progres):
+
+
+def petlaObliczen(sciezka,opcja,dl,sz,gr,ppk,progres,msgBox):
     folderObliczone(sciezka)
     csv_files = glob.glob(os.path.join(sciezka, "*.csv"))
     total_files = len(csv_files)
+    msgBox.setWindowTitle("Błąd")
     for i,plik in enumerate(csv_files):
-        obliczenia(sciezka,plik,opcja,dl,sz,gr,ppk)
-        progres.setValue(int((i+1)/total_files*50))
-        print(progres.value())
-    do_wykresow(sciezka)
+        obliczenia(sciezka,plik,opcja,dl,sz,gr,ppk,msgBox)  
+        progres.setValue(int((i+1)/total_files*100))
+    do_wykresow(sciezka,progres)
 
-def obliczenia(sciezka,plik,opcja,dl,sz,gr,ppk):
+
+
+
+def obliczenia(sciezka,plik,opcja,dl,sz,gr,ppk,msgBox):
 #pododawac bloki try except do wykrycia bledow
 #czytanie danych
     try:
         nazwaPliku = Path(plik).stem
         df = pd.read_csv(plik,sep=';',encoding="utf-8")
     except:
-        print("blad w czytaniu")
+        msgBox.setText("Błąd w czytaniu danych")
+        return msgBox.exec()
     #czyszczenie danych
     try:
         df.columns = df.columns.str.strip()
@@ -42,7 +48,6 @@ def obliczenia(sciezka,plik,opcja,dl,sz,gr,ppk):
             df['Temp'] = int(nazwaPliku)
         except:
             df['Temp'] = 0
-    
         df.drop(df.filter(regex="Unname"),axis=1, inplace=True)
         df.replace(',','.',inplace = True)
         df['PHASe'] = df['PHASe'].str.replace(',','.').astype(float)
@@ -50,7 +55,8 @@ def obliczenia(sciezka,plik,opcja,dl,sz,gr,ppk):
         df['D'] = df['D'].str.replace(',','.').astype(float)
         df['Rp'] = df['Rp'].str.replace(',','.').astype(float)
     except:
-        print("blad podczas czyszczenia")
+        msgBox.setText("Błąd w czyszczeniu danych")
+        return msgBox.exec()
     global f
     f = df['Freq']
     #Tworzenie nowych kolumn i tworzenie obliczen
@@ -60,11 +66,13 @@ def obliczenia(sciezka,plik,opcja,dl,sz,gr,ppk):
         else:
             df['Konduktywnosc sigma'] = wzory.cpp(wzory.Rho(df['Rp']),gr,ppk)
     except:
-        print("blad w obliczaniu konduktacji")
+        msgBox.setText("Błąd w obliczaniu konduktancji")
+        return msgBox.exec()
     try:
         df['rho'] = wzory.Rho(df['Rp'])
     except:
-        print("blad w obliczaniu rho")
+        msgBox.setText("Błąd w obliczaniu Rho")
+        return msgBox.exec()
 
     df['Tp w K'] = df['Temp'] + 273
     df['1000/Tp w K'] = 1000/df['Tp w K']
@@ -76,15 +84,19 @@ def obliczenia(sciezka,plik,opcja,dl,sz,gr,ppk):
         else:
             df['Re dielekt.'] = wzory.rSkladowaPrzenikalnosci(df['Cp'],wzory.C0(ppk,gr))
     except:
-        print("blad w obliczaniu re skladowej")
+        msgBox.setText("Błąd w obliczaniu składowej rzeczywistej")
+        return msgBox.exec()
     
     df['Im dielekt.'] = wzory.iSkladowaPrzenikalnosci(df['Konduktywnosc sigma'],wzory.omega(df['Freq']))
     try:
         doZapisania = os.path.join(sciezka,'obliczone\\')
         df.to_excel(doZapisania+nazwaPliku+'.xlsx',index = False)
     except:
-        print("blad podczas zapisywania")
-def do_wykresow(sciezka):
+        msgBox.setText("Błąd podczas zapisywania")
+        return msgBox.exec()
+
+
+def do_wykresow(sciezka,progres):
     """
     stworz dataframe - my dla potrzebnych parametrow
     otworz folder
@@ -110,7 +122,7 @@ def do_wykresow(sciezka):
             i[j] = nan
     
     #reszta
-    for plik in xlxsPliki:
+    for i,plik in enumerate(xlxsPliki):
         nazwaPliku = Path(plik).stem
         df = pd.read_excel(plik)
         wspAlfa[nazwaPliku] = df['wspl. kond. alfa']
@@ -122,11 +134,12 @@ def do_wykresow(sciezka):
         wspTeta[nazwaPliku] = df['PHASe']
         wspTgDelta[nazwaPliku] = df['D']
         imskld[nazwaPliku] = df['Im dielekt.']
+        progres.setValue(int((i+1)/len(xlxsPliki)*80))
     for i in dfLista:
         if i.keys()[-1] == "pok":
             to_move = i.pop(i.keys()[-1])
             i.insert(1,"pok",to_move)
-
+    progres.setValue(90)
     del dfLista[-1]
 
     wspEps.insert(1,"omega",wzory.omega(wspEps['Freq']))
@@ -141,3 +154,4 @@ def do_wykresow(sciezka):
     wspTeta.to_excel(pathWykresy+'\\'+'wsp teta'+'.xlsx',index = False)
     wspTgDelta.to_excel(pathWykresy+'\\'+'wsp tg delta'+'.xlsx',index = False)
     imskld.to_excel(pathWykresy+'\\'+'Im skladowa'+'.xlsx',index = False)
+    progres.setValue(100)
