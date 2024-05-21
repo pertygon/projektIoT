@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QRegExpValidator
 import obliczenia
+from wykresy import *
 import os
 import sys
 class oknoWyboru(QWidget):
@@ -114,6 +115,7 @@ class oknoWyboru(QWidget):
         ppKontaktu.setValidator(validator)
         podgladPrzycisk = QPushButton("Wybierz folder")
         obliczPrzycisk = QPushButton("Wykonaj Obliczenia")
+        wykresPrzycisk = QPushButton("Stwórz wykres")
         self.cipGrupa = QGroupBox("Wprowadź informacje o sposobie wykonania pomiaru")
         self.cppGrupa = QGroupBox("Wprowadź informacje o sposobie wykonania pomiaru")
         
@@ -184,6 +186,7 @@ class oknoWyboru(QWidget):
         row1.addLayout(column2)
         row2.addWidget(self.progresBar)
         row3.addWidget(obliczPrzycisk)
+        row3.addWidget(wykresPrzycisk)
         mainLayout.addLayout(row1)
         mainLayout.addLayout(row2)
         mainLayout.addLayout(row3)
@@ -195,6 +198,10 @@ class oknoWyboru(QWidget):
         CIP.clicked.connect(self.wyswietlCIP)
         CPP.clicked.connect(self.wyswietlCPP)
         obliczPrzycisk.clicked.connect(self.oblicz)
+        wykresPrzycisk.clicked.connect(self.open_wykres_app)
+    def open_wykres_app(self):
+        self.wykres_app = WykresApp()
+        self.wykres_app.show()
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     okno = oknoWyboru()
