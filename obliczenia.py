@@ -32,68 +32,89 @@ def petlaObliczen(sciezka,opcja,dl,sz,gr,ppk,progres,msgBox):
 
 
 
-def obliczenia(sciezka,plik,opcja,dl,sz,gr,ppk,msgBox):
-#pododawac bloki try except do wykrycia bledow
-#czytanie danych
+def obliczenia(sciezka, plik, opcja, dl, sz, gr, ppk, msgBox):
+    # Czytanie danych
     try:
         nazwaPliku = Path(plik).stem
-        df = pd.read_csv(plik,sep=';',encoding="utf-8")
-    except:
-        msgBox.setText("Błąd w czytaniu danych")
+        df = pd.read_csv(plik, sep=';', encoding="utf-8",decimal=',')
+    except Exception as e:
+        msgBox.setText(f"Błąd w czytaniu danych: {e}")
         return msgBox.exec()
-    #czyszczenie danych
+    # Sprawdzanie liczby kolumn i przesuwanie wartości, jeśli jest 8 kolumn
+    if not df.iloc[:, 7].isnull().all():
+    # Przesuwanie wartości kolumn o jedną w lewo
+        df.iloc[:, 2:7] = df.iloc[:, 3:8]
+    # Przypisanie nazwy kolumnie, która nie ma nazwy
+        df.columns = ['Lp.', 'Freq', 'Temp', 'PHASe', 'Cp', 'D', 'Rp', 'Unnamed']
+    # Usunięcie wierszy z NaN w kolumnie Lp.
+        df.dropna(subset=['Lp.'], inplace=True)
+    else:
+        df.columns = df.columns.str.strip()
+
+    # Czyszczenie danych
     try:
         df.columns = df.columns.str.strip()
         try:
             df['Temp'] = int(nazwaPliku)
-        except:
+        except ValueError:
             df['Temp'] = 0
-        df.drop(df.filter(regex="Unname"),axis=1, inplace=True)
-        df.replace(',','.',inplace = True)
-        df['PHASe'] = df['PHASe'].str.replace(',','.').astype(float)
-        df['Cp'] = df['Cp'].str.replace(',','.').astype(float)
-        df['D'] = df['D'].str.replace(',','.').astype(float)
-        df['Rp'] = df['Rp'].str.replace(',','.').astype(float)
-    except:
-        msgBox.setText("Błąd w czyszczeniu danych")
+        df.drop(df.filter(regex="Unname"), axis=1, inplace=True)
+        df.replace(',', '.', inplace=True)
+        
+        # Sprawdzanie i konwersja kolumn na float, jeśli są stringami
+        if df['PHASe'].dtype == object:
+            df['PHASe'] = df['PHASe'].str.replace(',', '.').astype(float)
+        if df['Cp'].dtype == object:
+            df['Cp'] = df['Cp'].str.replace(',', '.').astype(float)
+        if df['D'].dtype == object:
+            df['D'] = df['D'].str.replace(',', '.').astype(float)
+        if df['Rp'].dtype == object:
+            df['Rp'] = df['Rp'].str.replace(',', '.').astype(float)
+    except Exception as e:
+        msgBox.setText(f"Błąd w czyszczeniu danych: {e}")
         return msgBox.exec()
+
     global f
     f = df['Freq']
-    #Tworzenie nowych kolumn i tworzenie obliczen
+
+    # Tworzenie nowych kolumn i obliczenia
     try:
         if opcja == 1:
-            df['Konduktywnosc sigma'] = wzory.cip(wzory.Rho(df['Rp']),gr*sz,dl)
+            df['Konduktywnosc sigma'] = wzory.cip(wzory.Rho(df['Rp']), gr * sz, dl)
         else:
-            df['Konduktywnosc sigma'] = wzory.cpp(wzory.Rho(df['Rp']),gr,ppk)
-    except:
-        msgBox.setText("Błąd w obliczaniu konduktancji")
+            df['Konduktywnosc sigma'] = wzory.cpp(wzory.Rho(df['Rp']), gr, ppk)
+    except Exception as e:
+        msgBox.setText(f"Błąd w obliczaniu konduktancji: {e}")
         return msgBox.exec()
+
     try:
         df['rho'] = wzory.Rho(df['Rp'])
-    except:
-        msgBox.setText("Błąd w obliczaniu Rho")
+    except Exception as e:
+        msgBox.setText(f"Błąd w obliczaniu Rho: {e}")
         return msgBox.exec()
 
     df['Tp w K'] = df['Temp'] + 273
-    df['1000/Tp w K'] = 1000/df['Tp w K']
+    df['1000/Tp w K'] = 1000 / df['Tp w K']
+    df['wspl. kond. alfa'] = wzory.wsplKonduktywnosci(df['Konduktywnosc sigma'], df['Freq'])
 
-    df['wspl. kond. alfa'] = wzory.wsplKonduktywnosci(df['Konduktywnosc sigma'],df['Freq'])
     try:
         if opcja == 1:
-            df['Re dielekt.'] = wzory.rSkladowaPrzenikalnosci(df['Cp'],wzory.C0(dl*sz,gr))
+            df['Re dielekt.'] = wzory.rSkladowaPrzenikalnosci(df['Cp'], wzory.C0(dl * sz, gr))
         else:
-            df['Re dielekt.'] = wzory.rSkladowaPrzenikalnosci(df['Cp'],wzory.C0(ppk,gr))
-    except:
-        msgBox.setText("Błąd w obliczaniu składowej rzeczywistej")
+            df['Re dielekt.'] = wzory.rSkladowaPrzenikalnosci(df['Cp'], wzory.C0(ppk, gr))
+    except Exception as e:
+        msgBox.setText(f"Błąd w obliczaniu składowej rzeczywistej: {e}")
         return msgBox.exec()
-    
-    df['Im dielekt.'] = wzory.iSkladowaPrzenikalnosci(df['Konduktywnosc sigma'],wzory.omega(df['Freq']))
+
+    df['Im dielekt.'] = wzory.iSkladowaPrzenikalnosci(df['Konduktywnosc sigma'], wzory.omega(df['Freq']))
+
     try:
-        doZapisania = os.path.join(sciezka,'obliczone\\')
-        df.to_excel(doZapisania+nazwaPliku+'.xlsx',index = False)
-    except:
-        msgBox.setText("Błąd podczas zapisywania")
+        doZapisania = os.path.join(sciezka, 'obliczone')
+        df.to_excel(os.path.join(doZapisania, nazwaPliku + '.xlsx'), index=False)
+    except Exception as e:
+        msgBox.setText(f"Błąd podczas zapisywania: {e}")
         return msgBox.exec()
+
 
 
 def do_wykresow(sciezka,progres):

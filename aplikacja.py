@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QRadioButton, QVBoxLayout, 
     QHBoxLayout, QVBoxLayout,QProgressBar,
     QLineEdit, QButtonGroup, QListWidget,
-    QFileDialog, QGroupBox, QMessageBox, QMenuBar
+    QFileDialog, QGroupBox, QMessageBox
 )
 from PyQt5.QtGui import QRegExpValidator
 import obliczenia
