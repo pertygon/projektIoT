@@ -92,9 +92,9 @@ class WykresApp(QWidget):
             self.df = pd.read_excel(self.filename)
             if 'omega' in self.df.columns:
                 self.df = self.df.drop(columns=['omega'])
-            num_rows = len(self.df)
-            self.label2.setText(f"Liczba wierszy w pliku: {num_rows}")
-            
+            num_columns = len(self.df.columns)
+            self.label2.setText(f"Liczba kolumn w pliku: {num_columns}")
+
             min_freq = self.df.iloc[:, 0].min()
             max_freq = self.df.iloc[:, 0].max()
             self.freq_label.setText(f"Zakres częstotliwości: {min_freq} - {max_freq}")
@@ -110,6 +110,7 @@ class WykresApp(QWidget):
             self.save_button.setEnabled(True)
         else:
             self.label2.setText("Nie wybrano pliku")
+            self.freq_label.setText("")
 
     def rysuj_wykres(self):
         if self.df is not None:
@@ -162,6 +163,7 @@ class WykresApp(QWidget):
                 self.ax.set_ylabel(y_label, fontsize=14)
                 self.ax.grid(True, which='both', linestyle='--', linewidth=0.5)
                 self.ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+                self.figure.tight_layout()
                 self.canvas.draw()
             except ValueError:
                 QMessageBox.critical(self, "Błąd", "Wprowadzono nieprawidłowe wartości.")
@@ -179,4 +181,3 @@ class WykresApp(QWidget):
                 QMessageBox.warning(self, "Błąd", "Nie podano ścieżki do zapisu.")
         else:
             QMessageBox.critical(self, "Błąd", "Brak danych do zapisania. Najpierw wczytaj plik i narysuj wykres.")
-

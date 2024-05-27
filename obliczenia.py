@@ -36,7 +36,7 @@ def obliczenia(sciezka, plik, opcja, dl, sz, gr, ppk, msgBox):
     # Czytanie danych
     try:
         nazwaPliku = Path(plik).stem
-        df = pd.read_csv(plik, sep=';', encoding="utf-8",decimal=',')
+        df = pd.read_csv(plik, sep=';', encoding="utf-8")
     except Exception as e:
         msgBox.setText(f"Błąd w czytaniu danych: {e}")
         return msgBox.exec()
