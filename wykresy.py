@@ -1,26 +1,69 @@
+import sys
 import pandas as pd
 import matplotlib.pyplot as plt
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog,
-                             QLineEdit, QLabel, QMessageBox, QCheckBox)
+                             QLineEdit, QLabel, QMessageBox, QCheckBox, QSlider)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from ultralytics import YOLO
+import json
+import os
 
 class WykresApp(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.initUI()
+        
         self.df = None
         self.filename = None
-
+        self.model = None
+        self.model_path = None
+        self.conf_threshold = 0.5
+        self.initUI()
+        # Załaduj na starcie sciezke do modelu
+        self.load_model()
+    #wybierz model ktory ma sie wczytywac na starcie
+    def select_model_stup(self):
+        options = QFileDialog.Options()
+        filename, _ = QFileDialog.getOpenFileName(self, "Wybierz model YOLO", "", "PyTorch files (*.pt)", options=options)
+        if filename:
+            with open('model.json', 'w') as model_file:
+                json.dump({"path": filename}, model_file)
+            self.model_path = filename
+            self.model_label.setText(f"Aktualny model: {filename}")
+        else:
+            QMessageBox.critical(self, "Błąd", "Nie wybrano modelu.")
+    #zaladuj model
+    def load_model(self):
+        try:
+            with open('model.json', 'r') as model_file:
+                data = json.load(model_file)
+                self.model = YOLO(data['path'])
+                self.model_path = data['path']
+                self.model_label.setText(f"Aktualny model: {data['path']}")
+        except Exception as e:
+            self.model_label.setText("Brak załadowanego modelu")
+            QMessageBox.critical(self, "Błąd", f"Nie znaleziono modelu. {str(e)}")
+    #wybierz model jednorazowo
+    def select_model(self):
+        options = QFileDialog.Options()
+        filename, _ = QFileDialog.getOpenFileName(self, "Wybierz model YOLO", "", "PyTorch files (*.pt)", options=options)
+        if filename:
+            self.model = YOLO(filename)
+            self.model_path = filename
+            self.model_label.setText(f"Aktualny model: {filename}")
+        else:
+            QMessageBox.critical(self, "Błąd", "Nie wybrano modelu.")
+        
     def initUI(self):
         main_layout = QHBoxLayout()
 
-        # Left layout for the plot
+        # Lewy layout
         self.figure, self.ax = plt.subplots()
         self.canvas = FigureCanvas(self.figure)
         main_layout.addWidget(self.canvas, stretch=3)
 
-        # Right layout for controls
+        # Prawy layout
         control_layout = QVBoxLayout()
 
         self.label = QLabel("Wybierz plik Excel:", self)
@@ -77,6 +120,37 @@ class WykresApp(QWidget):
         self.save_button.clicked.connect(self.zapisz_wykres)
         control_layout.addWidget(self.save_button)
 
+        self.pred_button = QPushButton("Wykryj zjawisko", self)
+        self.pred_button.setEnabled(False)
+        self.pred_button.clicked.connect(self.predict_yolo)
+        control_layout.addWidget(self.pred_button)
+
+        self.conf_slider = QSlider(Qt.Horizontal)  # Ustawienie orientacji suwaka
+        self.conf_slider.setMinimum(0)
+        self.conf_slider.setMaximum(100)
+        self.conf_slider.setValue(int(self.conf_threshold * 100))
+        self.conf_slider.setEnabled(False)
+        self.conf_slider.valueChanged.connect(self.update_conf_threshold)
+        control_layout.addWidget(self.conf_slider)
+
+
+        self.conf_label = QLabel(f"Próg pewności: {self.conf_threshold:.2f}", self)
+        control_layout.addWidget(self.conf_label)
+
+        self.sel_model = QPushButton("Wybierz domyślny model", self)
+        self.sel_model.clicked.connect(self.select_model_stup)
+        control_layout.addWidget(self.sel_model)
+
+        self.ld_model = QPushButton("Załaduj inny model", self)
+        self.ld_model.clicked.connect(self.select_model)
+        control_layout.addWidget(self.ld_model)
+
+        self.model_label = QLabel("Brak załadowanego modelu", self)
+        control_layout.addWidget(self.model_label)
+
+        self.pred_label = QLabel("", self)
+        control_layout.addWidget(self.pred_label)
+
         control_layout.addStretch()
 
         main_layout.addLayout(control_layout, stretch=1)
@@ -99,7 +173,7 @@ class WykresApp(QWidget):
             max_freq = self.df.iloc[:, 0].max()
             self.freq_label.setText(f"Zakres częstotliwości: {min_freq} - {max_freq}")
 
-            # Enable input fields and buttons
+            # Wlacz przyciski
             self.freq_min_input.setEnabled(True)
             self.freq_max_input.setEnabled(True)
             self.columns_input.setEnabled(True)
@@ -108,6 +182,8 @@ class WykresApp(QWidget):
             self.checkbox_x.setEnabled(True)
             self.button2.setEnabled(True)
             self.save_button.setEnabled(True)
+            self.pred_button.setEnabled(True)
+            self.conf_slider.setEnabled(True)
         else:
             self.label2.setText("Nie wybrano pliku")
             self.freq_label.setText("")
@@ -181,3 +257,35 @@ class WykresApp(QWidget):
                 QMessageBox.warning(self, "Błąd", "Nie podano ścieżki do zapisu.")
         else:
             QMessageBox.critical(self, "Błąd", "Brak danych do zapisania. Najpierw wczytaj plik i narysuj wykres.")
+
+    def predict_yolo(self):
+        if self.model and self.df is not None:
+            # Zapisz wykres jako jpg
+            temp_image_path = "temp_plot.jpg"
+            self.figure.savefig(temp_image_path)
+
+            # Wykryj zjawisko
+            results = self.model.predict(source=temp_image_path, conf=self.conf_threshold)
+
+            # Wyswietl klasy jakie zostaly wykryte
+            if results:
+                predicted_labels = set()
+                for result in results:
+                    for box in result.boxes:
+                        if box.conf >= self.conf_threshold:
+                            predicted_labels.add(self.model.names[int(box.cls)])
+
+                prediction_text = f"Predykcje: {', '.join(predicted_labels)}" if predicted_labels else "Brak predykcji"
+                self.pred_label.setText(prediction_text)
+            else:
+                self.pred_label.setText("Brak predykcji")
+
+            # usun zjdecie
+            if os.path.exists(temp_image_path):
+                os.remove(temp_image_path)
+        else:
+            QMessageBox.critical(self, "Błąd", "Model nie jest załadowany lub brak danych do predykcji.")
+
+    def update_conf_threshold(self):
+        self.conf_threshold = self.conf_slider.value() / 100.0
+        self.conf_label.setText(f"Próg pewności: {self.conf_threshold:.2f}")
