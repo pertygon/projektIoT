@@ -15,6 +15,8 @@ Użytkownik może wybrać jakie kolumny z temperaturą oraz dla jakiego przedzia
 Użytkownik może ustawić etykietę dla osi Y, włączyć/wyłączyć skalę logarytmiczną dla osi X i Y.
 Aby wykreślić wykres należy wcisnąć przycisk "Rysuj wykres".
 Utworzony wykres można zapisać przy pomocy przycisku.
+Utworzono przyciski do wczytywania modeli sztucznej sieci neuronowej.
+Po wygenerowaniu wykresu można wykryć jakie zjawiska występują na wykresie.
 
 Program wykonali:
 Michał Matuła
