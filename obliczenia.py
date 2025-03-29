@@ -80,9 +80,9 @@ def obliczenia(sciezka, plik, opcja, dl, sz, gr, ppk, msgBox):
     # Tworzenie nowych kolumn i obliczenia
     try:
         if opcja == 1:
-            df['Konduktywnosc sigma'] = wzory.cip(wzory.Rho(df['Rp']), gr * sz, dl)
+            df['Konduktywnosc sigma'] = wzory.cip(df['Rp'], gr * sz, dl)
         else:
-            df['Konduktywnosc sigma'] = wzory.cpp(wzory.Rho(df['Rp']), gr, ppk)
+            df['Konduktywnosc sigma'] = wzory.cpp(df['Rp'], gr, ppk)
     except Exception as e:
         msgBox.setText(f"Błąd w obliczaniu konduktancji: {e}")
         return msgBox.exec()
