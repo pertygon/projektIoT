@@ -1,7 +1,7 @@
 Instrukcja obsługi:
 -Główne okno
 Należy wybrać folder ,w którym znajdują się pliki z danymi pomiarowymi. Muszą one być w formacie CSV, oddzielone od siebie średnikami i separatorem dziesiętnym jest przecinek.
-Program umożliwia jedynie wprowadzanie danych, w głównym oknie, w formacie liczbowym. Aby użyć separatora dziesiętnego należy użyć kropki. Dopuszcza się używanie notacji naukowej. Przykłady: 2e6 , 2e-4 
+Program umożliwia jedynie wprowadzanie danych, w głównym oknie, w formacie liczbowym. Podstawową jednostką są centymetry. Aby użyć separatora dziesiętnego należy użyć kropki. Dopuszcza się używanie notacji naukowej. Przykłady: 2e6 , 2e-4 
 Muszą być nazwy kolumn o podanej nazwie i następującej kolejności: Lp.;Freq;Temp;PHASe;Cp;D;Rp
 Podczas wykonywania obliczeń należy zamknąć arkusze i pliki z otwartymi danymi by nie blokować programowi dostępu do tych danych podczas zapisywania.
 Postęp wykonywania obliczeń jest pokazywany na pasku postępu.
