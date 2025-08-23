@@ -95,16 +95,16 @@ class oknoWyboru(QWidget):
         radioGroup.addButton(CIP)
         radioGroup.addButton(CPP)
         global szProbki, grProbki, dlProbki, ppKontaktu
-        dlProbkiEt = QLabel("Długość próbki")
+        dlProbkiEt = QLabel("Długość próbki w cm")
         dlProbki = QLineEdit()
 
-        szProbkiEt = QLabel("Szerokość próbki")
+        szProbkiEt = QLabel("Szerokość próbki w cm")
         szProbki = QLineEdit()
 
-        grProbkiEt = QLabel("Grubość próbki")
+        grProbkiEt = QLabel("Grubość próbki w cm")
         grProbki = QLineEdit()
 
-        ppKontaktuEt = QLabel("Pole powierzchni kontaktu")
+        ppKontaktuEt = QLabel("Pole powierzchni kontaktu w cm^2")
         ppKontaktu = QLineEdit()
 
         podgladEtykieta = QLabel("Podgląd wybranych plików")
